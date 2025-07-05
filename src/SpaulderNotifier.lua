@@ -35,20 +35,32 @@ function SN.onUpdateEquips(code, bagID, slotIndex, isNewItem, soundCategory, upd
 	end
 end
 
+function SN.onTravel(code, initial)
+	if (SN.firstLogin or initial) and SN.savedVariables.currentZoneID ~= GetUnitRawWorldPosition("player") then
+		SN.savedVariables.activeSpaulder = false
+		if IsWearingSpaulder() then SpaulderDisplay:SetHidden(false) end
+		SN.savedVariables.currentZoneID = GetUnitRawWorldPosition("player")
+		SN.firstLogin = false
+	end
+end
+
 
 function SN.Initialize()
 	SN.defaults = {
 		activeSpaulder = true,
+		currentZoneID = -1,
 	}
 	SN.savedVariables = ZO_SavedVars:New("SNSavedVariables", 1, nil, SN.defaults, GetWorldName())
 	if IsWearingSpaulder() then
 		SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
 	end
 	
+	SN.firstLogin = true
 	
 	EVENT_MANAGER:RegisterForEvent(SN.name, EVENT_COMBAT_EVENT, SN.OnCombatEvent)
 	EVENT_MANAGER:RegisterForEvent(SN.name, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, SN.onUpdateEquips)
 	EVENT_MANAGER:RegisterForEvent(SN.name, EVENT_ARMORY_BUILD_RESTORE_RESPONSE, SN.onUpdateEquips)
+	EVENT_MANAGER:RegisterForEvent(SN.name, EVENT_PLAYER_ACTIVATED, SN.onTravel)
 end
 
 function SN.OnAddOnLoaded(event, addonName)
