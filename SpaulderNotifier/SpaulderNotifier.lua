@@ -18,7 +18,7 @@ local function IsWearingSpaulder()
 end
 
 function SN.OnCombatEvent(eventCode, result, isError, abilityName, abilityGraphic, abilityActionSlotType, sourceName, sourceType, targetName, targetType, hitValue, powerType, damageType, _log, sourceUnitID, targetUnitID, abilityID, overflow)
-	if abilityID == 163359 and IsWearingSpaulder() then
+	if abilityID == 163359 and targetType == COMBAT_UNIT_TYPE_PLAYER and IsWearingSpaulder() then
 		if result == ACTION_RESULT_EFFECT_GAINED then
 			SN.savedVariables.activeSpaulder = true
 			SpaulderDisplay:SetHidden(true)
