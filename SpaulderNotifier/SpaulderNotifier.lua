@@ -44,15 +44,26 @@ function SN.onTravel(code, initial)
 	end
 end
 
+local function temporarilyShowLabel()
+    --Hide UI 5 seconds after most recent change.
+    SpaulderDisplay:SetHidden(false)
+    EVENT_MANAGER:RegisterForUpdate(SN.name.."_editLabel", 5000, function()
+        if SCENE_MANAGER:GetScene("hud"):GetState() == SCENE_HIDDEN or SN.savedVariables.isHidden then
+            SpaulderDisplay:SetHidden(true)
+        end
+        EVENT_MANAGER:UnregisterForUpdate(SN.name.."_editLabel")
+    end)
+end
 
 function SN.Initialize()
 	SN.defaults = {
 		activeSpaulder = true,
 		currentZoneID = -1,
 
-		
-		selectedFontNumber = "42",
-		selectedFontName = "ZoFontGamepad42",
+		selectedFontNumber = "42", --fontsize
+		fontWeight = "soft-shadow-thin",
+		fontStyle = "GAMEPAD_MEDIUM_FONT",
+
 		color = {
 			red = 1,
 			green= 0,
@@ -68,7 +79,7 @@ function SN.Initialize()
 	SpaulderDisplay:SetAnchor(CENTER, GuiRoot, CENTER, SN.savedVariables.offset_x, SN.savedVariables.offset_y)
 	SpaulderDisplayLabel:SetColor(SN.savedVariables.color.red, SN.savedVariables.color.green, SN.savedVariables.color.blue)
 	SpaulderDisplayLabel:SetAlpha(SN.savedVariables.color.alpha)
-	SpaulderDisplayLabel:SetFont(SN.savedVariables.selectedFontName)
+	SpaulderDisplayLabel:SetFont(string.format("$(%s)|%s|%s", SN.savedVariables.fontStyle, SN.savedVariables.selectedFontNumber, SN.savedVariables.fontWeight))
 
 	if IsWearingSpaulder() then
 		SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
@@ -77,79 +88,67 @@ function SN.Initialize()
 	--settings
 	local settings = LibHarvensAddonSettings:AddAddon("Spaulder Notifier")
 
-	local fontSection = {type = LibHarvensAddonSettings.ST_SECTION,label = "Font",}
-	local positionSection = {type = LibHarvensAddonSettings.ST_SECTION,label = "Position",}
+	settings:AddSetting({type = LibHarvensAddonSettings.ST_SECTION,label = "Font",})
 
-	local changeCounter = 0
-
-	local spaulder_font = {
-        type = LibHarvensAddonSettings.ST_DROPDOWN,
-        label = "Notifier Font Size",
-        tooltip = "Change the size of the Notifier.",
-        setFunction = function(combobox, name, item)
-			SpaulderDisplayLabel:SetFont(item.data);
-			SN.savedVariables.selectedFontNumber = name
-			SN.savedVariables.selectedFontName = item.data
-			
-			--Hide UI 5 seconds after most recent change. multiple changes can be queued.
-			SpaulderDisplay:SetHidden(false)
-			changeCounter = changeCounter + 1
-			local changeNum = changeCounter
-			zo_callLater(function()
-				if changeNum == changeCounter then
-					changeCounter = 0
-					if IsWearingSpaulder() then
-						SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
-					end
-				end
-			end, 5000)
-        end,
+	settings:AddSetting({
+        type = LibHarvensAddonSettings.ST_SLIDER,
+        label = "Font Size",
+        tooltip = "",
+        setFunction = function(value)
+			SN.savedVariables.selectedFontNumber = value
+	        SpaulderDisplayLabel:SetFont(string.format("$(%s)|%s|%s", SN.savedVariables.fontStyle, SN.savedVariables.selectedFontNumber, SN.savedVariables.fontWeight))
+			temporarilyShowLabel()
+		end,
         getFunction = function()
             return SN.savedVariables.selectedFontNumber
         end,
         default = SN.defaults.selectedFontNumber,
-        items = {
-            {
-                name = "18",
-                data = "ZoFontGamepad18"
-            },
-            {
-                name = "20",
-                data = "ZoFontGamepad20"
-            },
-            {
-                name = "22",
-                data = "ZoFontGamepad22"
-            },
-            {
-                name = "25",
-                data = "ZoFontGamepad25"
-            },
-            {
-                name = "34",
-                data = "ZoFontGamepad34"
-            },
-			{
-                name = "36",
-                data = "ZoFontGamepad36"
-            },
-            {
-                name = "42",
-                data = "ZoFontGamepad42"
-            },
-            {
-                name = "54",
-                data = "ZoFontGamepad54"
-            },
-            {
-                name = "61",
-                data = "ZoFontGamepad61"
-            },
-        },
-        disable = function() return false end,
-    }
+        min = 18,
+        max = 61,
+        step = 1,
+        unit = "", --optional unit
+        format = "%d", --value format
+    })
 
-	local color = {
+    settings:AddSetting({
+        type = LibHarvensAddonSettings.ST_DROPDOWN,
+        label = "Font Style",
+        tooltip = "",
+        items = {
+            {name = "GAMEPAD_MEDIUM_FONT", data = 1},
+            {name = "GAMEPAD_LIGHT_FONT", data = 2},
+            {name = "GAMEPAD_BOLD_FONT", data = 3},
+            {name = "MEDIUM_FONT", data = 4},
+            {name = "BOLD_FONT", data = 5},
+        },
+        getFunction = function() return SN.savedVariables.fontStyle end,
+        setFunction = function(control, itemName, itemData) 
+            SN.savedVariables.fontStyle = itemName
+	        SpaulderDisplayLabel:SetFont(string.format("$(%s)|%s|%s", SN.savedVariables.fontStyle, SN.savedVariables.selectedFontNumber, SN.savedVariables.fontWeight))
+            temporarilyShowLabel()
+        end,
+        default = SN.defaults.fontStyle
+    })
+
+    settings:AddSetting({
+        type = LibHarvensAddonSettings.ST_DROPDOWN,
+        label = "Font Weight",
+        tooltip = "",
+        items = {
+            {name = "soft-shadow-thick", data = 1},
+            {name = "soft-shadow-thin", data = 2},
+            {name = "thick-outline", data = 3},
+        },
+        getFunction = function() return SN.savedVariables.fontWeight end,
+        setFunction = function(control, itemName, itemData) 
+            SN.savedVariables.fontWeight = itemName
+	        SpaulderDisplayLabel:SetFont(string.format("$(%s)|%s|%s", SN.savedVariables.fontStyle, SN.savedVariables.selectedFontNumber, SN.savedVariables.fontWeight))
+            temporarilyShowLabel()
+        end,
+        default = SN.defaults.fontWeight
+    })
+
+	settings:AddSetting({
         type = LibHarvensAddonSettings.ST_COLOR,
         label = "Color",
         tooltip = "Change the color of the label.",
@@ -158,28 +157,18 @@ function SN.Initialize()
 			SpaulderDisplayLabel:SetColor(SN.savedVariables.color.red, SN.savedVariables.color.green, SN.savedVariables.color.blue)
 			SpaulderDisplayLabel:SetAlpha(SN.savedVariables.color.alpha)
 
-			--Hide UI 5 seconds after most recent change. multiple changes can be queued.
-			SpaulderDisplay:SetHidden(false)
-			changeCounter = changeCounter + 1
-			local changeNum = changeCounter
-			zo_callLater(function()
-				if changeNum == changeCounter then
-					changeCounter = 0
-					if IsWearingSpaulder() then
-						SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
-					end
-				end
-			end, 5000)
+			temporarilyShowLabel()
 		end,
         default = {SN.defaults.color.red, SN.defaults.color.green, SN.defaults.color.blue, SN.defaults.color.alpha},
         getFunction = function()
             return SN.savedVariables.color.red, SN.savedVariables.color.green, SN.savedVariables.color.blue, SN.savedVariables.color.alpha
         end,
-        disable = function() return false end,
-    }
+    })
+
+	settings:AddSetting({type = LibHarvensAddonSettings.ST_SECTION,label = "Position",})
 
 	SN.currentlyChangingPosition = false
-	local repositionUI = {
+	settings:AddSetting({
 		type = LibHarvensAddonSettings.ST_CHECKBOX,
 		label = "Joystick Reposition",
 		tooltip = "When enabled, you will be able to freely move around the UI with your right joystick.\n\nSet this to OFF after configuring position.",
@@ -205,25 +194,14 @@ function SN.Initialize()
 				end)
 			else
 				EVENT_MANAGER:UnregisterForUpdate(SN.name.."AdjustUI")
-				--Hide UI 5 seconds after most recent change. multiple changes can be queued.
-				SpaulderDisplay:SetHidden(false)
-				changeCounter = changeCounter + 1
-				local changeNum = changeCounter
-				zo_callLater(function()
-					if changeNum == changeCounter then
-						changeCounter = 0
-						if IsWearingSpaulder() then
-							SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
-						end
-					end
-				end, 5000)
+				temporarilyShowLabel()
 			end
 		end,
 		default = SN.currentlyChangingPosition
-	}
+	})
 
 	--x position offset
-	local slider_x = {
+	settings:AddSetting({
         type = LibHarvensAddonSettings.ST_SLIDER,
         label = "X Offset",
         tooltip = "",
@@ -233,18 +211,7 @@ function SN.Initialize()
 			SpaulderDisplay:ClearAnchors()
 			SpaulderDisplay:SetAnchor(CENTER, GuiRoot, CENTER, SN.savedVariables.offset_x, SN.savedVariables.offset_y)
 			
-			--Hide UI 5 seconds after most recent change. multiple changes can be queued.
-			SpaulderDisplay:SetHidden(false)
-			changeCounter = changeCounter + 1
-			local changeNum = changeCounter
-			zo_callLater(function()
-				if changeNum == changeCounter then
-					changeCounter = 0
-					if IsWearingSpaulder() then
-						SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
-					end
-				end
-			end, 5000)
+			temporarilyShowLabel()
 		end,
         getFunction = function()
             return SN.savedVariables.offset_x
@@ -255,11 +222,10 @@ function SN.Initialize()
         step = 5,
         unit = "", --optional unit
         format = "%d", --value format
-        disable = function() return false end,
-    }
+    })
 	
 	--y position offset
-	local slider_y = {
+	settings:AddSetting({
         type = LibHarvensAddonSettings.ST_SLIDER,
         label = "Y Offset",
         tooltip = "",
@@ -269,18 +235,7 @@ function SN.Initialize()
 			SpaulderDisplay:ClearAnchors()
 			SpaulderDisplay:SetAnchor(CENTER, GuiRoot, CENTER, SN.savedVariables.offset_x, SN.savedVariables.offset_y)
 			
-			--Hide UI 5 seconds after most recent change. multiple changes can be queued.
-			SpaulderDisplay:SetHidden(false)
-			changeCounter = changeCounter + 1
-			local changeNum = changeCounter
-			zo_callLater(function()
-				if changeNum == changeCounter then
-					changeCounter = 0
-					if IsWearingSpaulder() then
-						SpaulderDisplay:SetHidden(SN.savedVariables.activeSpaulder)
-					end
-				end
-			end, 5000)
+			temporarilyShowLabel()
 		end,
         getFunction = function()
             return SN.savedVariables.offset_y
@@ -291,8 +246,7 @@ function SN.Initialize()
         step = 5,
         unit = "", --optional unit
         format = "%d", --value format
-        disable = function() return false end,
-    }
+    })
 
 	settings:AddSettings({fontSection, spaulder_font, color})
 	settings:AddSettings({positionSection, repositionUI, slider_x, slider_y})
