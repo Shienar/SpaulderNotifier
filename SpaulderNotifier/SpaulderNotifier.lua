@@ -48,7 +48,7 @@ local function temporarilyShowLabel()
     --Hide UI 5 seconds after most recent change.
     SpaulderDisplay:SetHidden(false)
     EVENT_MANAGER:RegisterForUpdate(SN.name.."_editLabel", 5000, function()
-        if SCENE_MANAGER:GetScene("hud"):GetState() == SCENE_HIDDEN or SN.savedVariables.isHidden then
+        if SCENE_MANAGER:GetScene("hud"):GetState() == SCENE_HIDDEN or SN.savedVariables.isHidden or (IsWearingSpaulder() == false) then
             SpaulderDisplay:SetHidden(true)
         end
         EVENT_MANAGER:UnregisterForUpdate(SN.name.."_editLabel")
